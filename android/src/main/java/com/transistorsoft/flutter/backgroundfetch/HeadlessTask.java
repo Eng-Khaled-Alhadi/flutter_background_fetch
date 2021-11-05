@@ -18,15 +18,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import flutter_wallpaper_manager.FlutterWallpaperManagerPlugin;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.dart.DartExecutor;
+import io.flutter.embedding.engine.loader.ApplicationInfoLoader;
+import io.flutter.embedding.engine.loader.FlutterApplicationInfo;
 import io.flutter.embedding.engine.plugins.shim.ShimPluginRegistry;
 import io.flutter.plugin.common.JSONMethodCodec;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.view.FlutterCallbackInformation;
-import io.flutter.FlutterInjector;
+import sqflite.SqflitePlugin;
 
 @Keep
 public class HeadlessTask implements MethodChannel.MethodCallHandler, Runnable {
@@ -126,7 +129,9 @@ public class HeadlessTask implements MethodChannel.MethodCallHandler, Runnable {
             return;
         }
 
-        String appBundlePath = FlutterInjector.instance().flutterLoader().findAppBundlePath();
+        FlutterApplicationInfo info = ApplicationInfoLoader.load(mContext);
+        String appBundlePath = info.flutterAssetsDir;
+
         AssetManager assets = mContext.getAssets();
         if (!sHeadlessTaskRegistered.get()) {
             sBackgroundFlutterEngine = new FlutterEngine(mContext);
@@ -148,6 +153,13 @@ public class HeadlessTask implements MethodChannel.MethodCallHandler, Runnable {
             // The pluginRegistrantCallback should only be set in the V1 embedding as
             // plugin registration is done via reflection in the V2 embedding.
             if (sPluginRegistrantCallback != null) {
+                try {
+                    sBackgroundFlutterEngine.getPlugins().add(new SqflitePlugin());
+                    sBackgroundFlutterEngine.getPlugins().add(new FlutterWallpaperManagerPlugin());
+
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
                 sPluginRegistrantCallback.registerWith(new ShimPluginRegistry(sBackgroundFlutterEngine));
             }
         }
